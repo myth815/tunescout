@@ -1,0 +1,4 @@
+interface:
+  display_name: "Search music with TuneScout"
+  short_description: "Search and identify music through TuneScout"
+  default_prompt: "Use $search-music to identify or search for this music with verifiable evidence."

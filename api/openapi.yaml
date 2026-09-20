@@ -1,0 +1,250 @@
+openapi: 3.1.0
+info:
+  title: TuneScout API
+  version: 0.1.0
+  description: Stateless federated music search with provider provenance.
+  license:
+    name: MIT
+    identifier: MIT
+servers:
+  - url: '{scheme}://{host}:{port}'
+    description: User-configured TuneScout instance.
+    variables:
+      scheme:
+        default: http
+        enum: [http, https]
+      host:
+        default: 127.0.0.1
+      port:
+        default: '8080'
+paths:
+  /healthz:
+    get:
+      summary: Check service health
+      operationId: health
+      security: []
+      responses:
+        '200':
+          description: Service is alive.
+          content:
+            application/json:
+              schema:
+                type: object
+        '500': {$ref: '#/components/responses/Error'}
+        '400': {$ref: '#/components/responses/Error'}
+  /v1/providers:
+    get:
+      summary: List provider capabilities
+      operationId: listProviders
+      responses:
+        '200':
+          description: Provider capability and configuration status.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  domain: {type: string, const: music}
+                  providers:
+                    type: array
+                    items: {$ref: '#/components/schemas/ProviderInfo'}
+        '401': {$ref: '#/components/responses/Error'}
+  /v1/search:
+    get:
+      summary: Search music with a simple text query
+      operationId: simpleSearch
+      parameters:
+        - {name: q, in: query, required: true, schema: {type: string}}
+        - name: types
+          in: query
+          schema: {type: string, description: Comma-separated entity types.}
+        - {name: limit, in: query, schema: {type: integer, minimum: 1, maximum: 100, default: 20}}
+        - {name: locale, in: query, schema: {type: string}}
+        - {name: region, in: query, schema: {type: string}}
+        - {name: providers, in: query, schema: {type: string, description: Comma-separated provider IDs.}}
+      responses:
+        '200': {$ref: '#/components/responses/SearchResponse'}
+        '400': {$ref: '#/components/responses/Error'}
+        '401': {$ref: '#/components/responses/Error'}
+    post:
+      summary: Search music with structured or audio evidence
+      operationId: search
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/SearchRequest'}
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                request:
+                  type: string
+                  description: JSON-encoded SearchRequest.
+                audio:
+                  type: string
+                  format: binary
+              required: [audio]
+      responses:
+        '200': {$ref: '#/components/responses/SearchResponse'}
+        '400': {$ref: '#/components/responses/Error'}
+        '401': {$ref: '#/components/responses/Error'}
+  /v1/entities/{entity_ref}:
+    get:
+      summary: Expand a stateless entity reference
+      operationId: getEntity
+      parameters:
+        - {name: entity_ref, in: path, required: true, schema: {type: string}}
+        - name: include
+          in: query
+          schema: {type: string, description: Comma-separated detail sections.}
+      responses:
+        '200':
+          description: Fresh detail responses from every provider represented by the reference.
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/EntityResponse'}
+        '400': {$ref: '#/components/responses/Error'}
+        '401': {$ref: '#/components/responses/Error'}
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+  responses:
+    SearchResponse:
+      description: Federated search response. It may be partial if one provider failed.
+      content:
+        application/json:
+          schema: {$ref: '#/components/schemas/SearchResponse'}
+    Error:
+      description: Request error.
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              error:
+                type: object
+                properties:
+                  code: {type: string}
+                  message: {type: string}
+  schemas:
+    SearchRequest:
+      type: object
+      properties:
+        query: {type: string}
+        mode: {type: string, enum: [auto, discover, identify, similar]}
+        types:
+          type: array
+          items: {type: string, enum: [artist, recording, release, release_track, work, lyrics]}
+        inputs:
+          type: array
+          items: {$ref: '#/components/schemas/Input'}
+        filters:
+          type: object
+          description: Unknown keys are ignored and reported in response warnings.
+          properties:
+            title: {type: string}
+            artist: {type: string}
+            release: {type: string}
+            album: {type: string}
+            duration_min_ms: {type: integer, minimum: 0}
+            duration_max_ms: {type: integer, minimum: 0}
+          additionalProperties: true
+        limit: {type: integer, minimum: 1, maximum: 100, default: 20}
+        locale: {type: string}
+        strategy: {$ref: '#/components/schemas/Strategy'}
+      anyOf:
+        - required: [query]
+        - required: [inputs]
+    Input:
+      type: object
+      required: [type]
+      properties:
+        type: {type: string, enum: [text, lyrics, metadata, document, image, audio]}
+        role: {type: string}
+        text: {type: string}
+        content: {type: string}
+        language: {type: string}
+        fields: {type: object, additionalProperties: true}
+    Strategy:
+      type: object
+      properties:
+        depth: {type: string, enum: [fast, normal, deep]}
+        providers:
+          type: array
+          items: {type: string}
+        region: {type: string}
+    SearchResponse:
+      type: object
+      required: [search_id, status, partial, interpreted_query, hits, provider_status]
+      properties:
+        search_id: {type: string}
+        status: {type: string, const: completed}
+        partial: {type: boolean}
+        interpreted_query: {type: object, additionalProperties: true}
+        hits:
+          type: array
+          items: {$ref: '#/components/schemas/Hit'}
+        provider_status:
+          type: array
+          items: {type: object, additionalProperties: true}
+        warnings:
+          type: array
+          items: {type: string}
+        elapsed_ms: {type: integer}
+        executed_at: {type: string, format: date-time}
+    Hit:
+      type: object
+      required: [entity_ref, entity_type, summary, rank_score, match, providers, provider_refs]
+      properties:
+        entity_ref: {type: string}
+        entity_type: {type: string}
+        summary: {type: object, additionalProperties: true}
+        rank_score: {type: number, minimum: 0, maximum: 1}
+        identity_confidence: {type: object, additionalProperties: true}
+        match: {type: object, additionalProperties: true}
+        providers:
+          type: array
+          items: {type: string}
+        provider_refs:
+          type: array
+          items: {$ref: '#/components/schemas/ProviderRef'}
+        available_sections:
+          type: array
+          items: {type: string}
+        offers:
+          type: array
+          items: {type: object, additionalProperties: true}
+    ProviderRef:
+      type: object
+      required: [provider, type, id]
+      properties:
+        provider: {type: string}
+        type: {type: string}
+        id: {type: string}
+        url: {type: string, format: uri}
+    ProviderInfo:
+      type: object
+      required: [id, enabled, configured, capabilities, requires_key]
+      properties:
+        id: {type: string}
+        enabled: {type: boolean}
+        configured: {type: boolean}
+        capabilities:
+          type: array
+          items: {type: string}
+        requires_key: {type: boolean}
+    EntityResponse:
+      type: object
+      properties:
+        entity_ref: {type: string}
+        entity_type: {type: string}
+        partial: {type: boolean}
+        sources:
+          type: array
+          items: {type: object, additionalProperties: true}
+security:
+  - {}
+  - bearerAuth: []
