@@ -45,3 +45,20 @@ func TestFinalizeAppliesMusicFilters(t *testing.T) {
 		t.Fatalf("unexpected filtered hits: %#v", got)
 	}
 }
+
+func TestPrepareDeepSearchKeepsCallerLimit(t *testing.T) {
+	prepared, _, _, err := (Policy{}).Prepare(model.SearchRequest{Query: "王菲", Limit: 5, Strategy: model.Strategy{Depth: "deep"}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if prepared.Limit != 25 || prepared.ResultLimit != 5 {
+		t.Fatalf("unexpected deep limits: provider=%d result=%d", prepared.Limit, prepared.ResultLimit)
+	}
+}
+
+func TestPrepareRejectsUnknownEntityType(t *testing.T) {
+	_, _, _, err := (Policy{}).Prepare(model.SearchRequest{Query: "王菲", Types: []string{"film"}})
+	if err == nil {
+		t.Fatal("unknown entity type should fail")
+	}
+}

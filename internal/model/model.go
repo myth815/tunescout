@@ -13,6 +13,9 @@ type SearchRequest struct {
 	Strategy Strategy       `json:"strategy,omitempty"`
 
 	AudioPath string `json:"-"`
+	// ResultLimit is the caller-visible limit. Limit may be widened internally
+	// so post-normalization filters do not starve the final result set.
+	ResultLimit int `json:"-"`
 }
 
 type Input struct {

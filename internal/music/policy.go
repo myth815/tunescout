@@ -24,7 +24,10 @@ func (Policy) Prepare(request model.SearchRequest) (model.SearchRequest, model.I
 	for _, input := range request.Inputs {
 		inputType := strings.ToLower(strings.TrimSpace(input.Type))
 		if inputType == "" {
-			continue
+			return request, model.InterpretedQuery{}, nil, errors.New("input type is required")
+		}
+		if !map[string]bool{"text": true, "lyrics": true, "metadata": true, "document": true}[inputType] {
+			return request, model.InterpretedQuery{}, nil, fmt.Errorf("unsupported input type: %s", input.Type)
 		}
 		inputTypes = append(inputTypes, inputType)
 		if input.Text != "" {
@@ -53,9 +56,20 @@ func (Policy) Prepare(request model.SearchRequest) (model.SearchRequest, model.I
 	if request.Limit > 100 {
 		request.Limit = 100
 	}
+	request.ResultLimit = request.Limit
+	if len(request.Filters) > 0 && request.Limit < 25 {
+		request.Limit = 25
+	}
 	if len(request.Types) == 0 {
 		request.Types = []string{"artist", "recording", "release"}
 	}
+	for index, entityType := range request.Types {
+		request.Types[index] = strings.ToLower(strings.TrimSpace(entityType))
+		if !map[string]bool{"artist": true, "recording": true, "release": true, "release_track": true, "lyrics": true}[request.Types[index]] {
+			return request, model.InterpretedQuery{}, nil, fmt.Errorf("unsupported entity type: %s", entityType)
+		}
+	}
+	request.Types = unique(request.Types)
 	warnings := unknownFilterWarnings(request.Filters)
 	intent := "catalog_search"
 	if request.AudioPath != "" {
@@ -66,6 +80,32 @@ func (Policy) Prepare(request model.SearchRequest) (model.SearchRequest, model.I
 				intent = "lyrics_search"
 			}
 		}
+	}
+	request.Mode = strings.ToLower(strings.TrimSpace(request.Mode))
+	switch request.Mode {
+	case "", "auto":
+	case "discover":
+		intent = "discovery_search"
+	case "identify":
+		if request.AudioPath == "" {
+			intent = "identify_from_clues"
+		}
+	default:
+		return request, model.InterpretedQuery{}, nil, fmt.Errorf("unsupported search mode: %s", request.Mode)
+	}
+	request.Strategy.Depth = strings.ToLower(strings.TrimSpace(request.Strategy.Depth))
+	switch request.Strategy.Depth {
+	case "", "normal":
+	case "fast":
+		if len(request.Strategy.Providers) == 0 {
+			request.Strategy.Providers = []string{"musicbrainz", "itunes", "lrclib", "acoustid", "audd"}
+		}
+	case "deep":
+		if request.Limit < 25 {
+			request.Limit = 25
+		}
+	default:
+		return request, model.InterpretedQuery{}, nil, fmt.Errorf("unsupported search depth: %s", request.Strategy.Depth)
 	}
 	return request, model.InterpretedQuery{Original: request.Query, Normalized: normalize(request.Query), DetectedIntent: intent, InputTypes: unique(inputTypes)}, warnings, nil
 }
@@ -142,8 +182,12 @@ func (Policy) Finalize(hits []model.Hit, request model.SearchRequest) []model.Hi
 		}
 		return hits[i].RankScore > hits[j].RankScore
 	})
-	if request.Limit > 0 && len(hits) > request.Limit {
-		return hits[:request.Limit]
+	limit := request.ResultLimit
+	if limit <= 0 {
+		limit = request.Limit
+	}
+	if limit > 0 && len(hits) > limit {
+		return hits[:limit]
 	}
 	return hits
 }

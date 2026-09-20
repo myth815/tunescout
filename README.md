@@ -22,6 +22,8 @@ curation workflow.
   of failing the whole search.
 - Apply optional `title`, `artist`, `release`/`album`, and duration filters after
   source normalization.
+- Support `fast`, `normal`, and `deep` search depths; deep search widens each
+  provider's candidate pool before final ranking and filtering.
 
 ## Quick start
 

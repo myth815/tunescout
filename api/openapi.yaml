@@ -134,7 +134,7 @@ components:
       type: object
       properties:
         query: {type: string}
-        mode: {type: string, enum: [auto, discover, identify, similar]}
+        mode: {type: string, enum: [auto, discover, identify]}
         types:
           type: array
           items: {type: string, enum: [artist, recording, release, release_track, work, lyrics]}
@@ -162,7 +162,7 @@ components:
       type: object
       required: [type]
       properties:
-        type: {type: string, enum: [text, lyrics, metadata, document, image, audio]}
+        type: {type: string, enum: [text, lyrics, metadata, document]}
         role: {type: string}
         text: {type: string}
         content: {type: string}
