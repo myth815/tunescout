@@ -1,6 +1,13 @@
 ---
 name: search-music
 description: Search or identify music through TuneScout using text, metadata, lyrics, or an audio excerpt. Use when clues are incomplete or conflicting and a model-guided multi-round search would improve recall; do not use it to modify media files or invent metadata without provider evidence.
+metadata:
+  openclaw:
+    requires:
+      bins:
+        - python3
+    os:
+      - linux
 ---
 
 # Search music with TuneScout
@@ -30,13 +37,13 @@ does not yield a high-confidence, well-supported result.
 5. Return the candidates and why they match. Leave adoption, tagging, movement,
    and deletion to the calling workflow.
 
-Use `scripts/tunescout_client.py` for calls so credentials stay in environment
+Run `scripts/tunescout_client.py` directly so credentials stay in environment
 variables. Examples:
 
 ```bash
-python3 scripts/tunescout_client.py search "王菲" --types artist,recording,release
-python3 scripts/tunescout_client.py search --audio /path/to/short-excerpt.mp3 --types recording
-python3 scripts/tunescout_client.py entity ENTITY_REF --include lyrics,releases,artwork,offers
+scripts/tunescout_client.py search "王菲" --types artist,recording,release
+scripts/tunescout_client.py search --audio /path/to/short-excerpt.mp3 --types recording
+scripts/tunescout_client.py entity ENTITY_REF --include lyrics,releases,artwork,offers
 ```
 
 Only send an audio file when the user has put it in scope for identification.
