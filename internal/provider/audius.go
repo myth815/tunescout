@@ -34,13 +34,16 @@ func (p *audius) Search(ctx context.Context, request model.SearchRequest) ([]mod
 	}
 	var response struct {
 		Data []struct {
-			ID        string            `json:"id"`
-			Title     string            `json:"title"`
-			Duration  int64             `json:"duration"`
-			Genre     string            `json:"genre"`
-			Permalink string            `json:"permalink"`
-			Artwork   map[string]string `json:"artwork"`
-			User      struct {
+			ID        string `json:"id"`
+			Title     string `json:"title"`
+			Duration  int64  `json:"duration"`
+			Genre     string `json:"genre"`
+			Permalink string `json:"permalink"`
+			Artwork   struct {
+				Large  string `json:"1000x1000"`
+				Medium string `json:"480x480"`
+			} `json:"artwork"`
+			User struct {
 				Name string `json:"name"`
 			} `json:"user"`
 		} `json:"data"`
@@ -55,9 +58,9 @@ func (p *audius) Search(ctx context.Context, request model.SearchRequest) ([]mod
 	hits := make([]model.Hit, 0, len(response.Data))
 	for _, item := range response.Data {
 		score := textScore(request.Query, item.Title+" "+item.User.Name)
-		artwork := item.Artwork["1000x1000"]
+		artwork := item.Artwork.Large
 		if artwork == "" {
-			artwork = item.Artwork["480x480"]
+			artwork = item.Artwork.Medium
 		}
 		refURL := item.Permalink
 		if refURL != "" && !strings.HasPrefix(refURL, "http") {

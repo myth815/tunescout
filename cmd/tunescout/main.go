@@ -23,7 +23,11 @@ func main() {
 		healthcheck()
 		return
 	}
-	cfg := config.FromEnv()
+	cfg, err := config.FromEnv()
+	if err != nil {
+		fmt.Fprintln(os.Stderr, err)
+		os.Exit(1)
+	}
 	logger := slog.New(slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{Level: cfg.LogLevel}))
 	client := &http.Client{Timeout: cfg.ProviderTimeout}
 
@@ -74,7 +78,11 @@ func main() {
 }
 
 func healthcheck() {
-	cfg := config.FromEnv()
+	cfg, err := config.FromEnv()
+	if err != nil {
+		fmt.Fprintln(os.Stderr, err)
+		os.Exit(1)
+	}
 	_, port, err := net.SplitHostPort(cfg.ListenAddress)
 	if err != nil || port == "" {
 		fmt.Fprintln(os.Stderr, "invalid TUNESCOUT_LISTEN address")

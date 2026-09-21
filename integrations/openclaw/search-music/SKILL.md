@@ -15,7 +15,7 @@ does not yield a high-confidence, well-supported result.
 ## Required configuration
 
 - `TUNESCOUT_BASE_URL`: service URL without a trailing slash.
-- `TUNESCOUT_API_KEY`: optional bearer token; keep it out of prompts and reports.
+- `TUNESCOUT_API_KEY` or `TUNESCOUT_API_KEY_FILE`: optional bearer token; keep it out of prompts and reports.
 
 ## Basic workflow
 

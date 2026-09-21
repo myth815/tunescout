@@ -34,6 +34,7 @@ curl 'http://127.0.0.1:8080/v1/search?q=王菲&types=artist,recording,release'
 ```
 
 If `TUNESCOUT_API_KEY` is set, add `Authorization: Bearer <key>` to requests.
+For container secrets, set `TUNESCOUT_API_KEY_FILE` to the mounted file instead.
 
 ### Search with structured evidence
 
@@ -81,7 +82,10 @@ curl 'http://127.0.0.1:8080/v1/entities/<entity_ref>?include=lyrics,releases,art
 | AcoustID | key required | Chromaprint audio identification |
 | AudD | token required | commercial audio recognition |
 
-Keys are read only from environment variables and never returned by the API.
+Keys are read from environment variables or their corresponding `*_FILE`
+variables and are never returned by the API. Direct values take precedence.
+The file forms are `TUNESCOUT_API_KEY_FILE`, `ACOUSTID_API_KEY_FILE`,
+`AUDD_API_TOKEN_FILE`, and `JAMENDO_CLIENT_ID_FILE`.
 Use `/v1/providers` to inspect configured capabilities.
 TuneScout serializes MusicBrainz requests at one request per second so multiple
 search types and concurrent callers remain within the public service's usage

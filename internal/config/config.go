@@ -1,6 +1,7 @@
 package config
 
 import (
+	"fmt"
 	"log/slog"
 	"os"
 	"strconv"
@@ -30,10 +31,27 @@ type Config struct {
 	AudDAPIToken       string
 }
 
-func FromEnv() Config {
+func FromEnv() (Config, error) {
+	apiKey, err := secret("TUNESCOUT_API_KEY")
+	if err != nil {
+		return Config{}, err
+	}
+	jamendoClientID, err := secret("JAMENDO_CLIENT_ID")
+	if err != nil {
+		return Config{}, err
+	}
+	acoustIDAPIKey, err := secret("ACOUSTID_API_KEY")
+	if err != nil {
+		return Config{}, err
+	}
+	audDAPIToken, err := secret("AUDD_API_TOKEN")
+	if err != nil {
+		return Config{}, err
+	}
+
 	return Config{
 		ListenAddress:      env("TUNESCOUT_LISTEN", ":8080"),
-		APIKey:             strings.TrimSpace(os.Getenv("TUNESCOUT_API_KEY")),
+		APIKey:             apiKey,
 		UserAgent:          env("TUNESCOUT_USER_AGENT", "TuneScout/0.1 (+https://github.com/myth815/tunescout)"),
 		LogLevel:           logLevel(env("TUNESCOUT_LOG_LEVEL", "info")),
 		MaxUploadBytes:     int64(envInt("TUNESCOUT_MAX_UPLOAD_MB", 32)) * 1024 * 1024,
@@ -45,12 +63,27 @@ func FromEnv() Config {
 		LRCLIBBaseURL:      strings.TrimRight(env("LRCLIB_BASE_URL", "https://lrclib.net"), "/"),
 		AudiusBaseURL:      strings.TrimRight(env("AUDIUS_BASE_URL", "https://api.audius.co"), "/"),
 		JamendoBaseURL:     strings.TrimRight(env("JAMENDO_BASE_URL", "https://api.jamendo.com"), "/"),
-		JamendoClientID:    strings.TrimSpace(os.Getenv("JAMENDO_CLIENT_ID")),
+		JamendoClientID:    jamendoClientID,
 		AcoustIDBaseURL:    strings.TrimRight(env("ACOUSTID_BASE_URL", "https://api.acoustid.org"), "/"),
-		AcoustIDAPIKey:     strings.TrimSpace(os.Getenv("ACOUSTID_API_KEY")),
+		AcoustIDAPIKey:     acoustIDAPIKey,
 		AudDBaseURL:        strings.TrimRight(env("AUDD_BASE_URL", "https://api.audd.io"), "/"),
-		AudDAPIToken:       strings.TrimSpace(os.Getenv("AUDD_API_TOKEN")),
+		AudDAPIToken:       audDAPIToken,
+	}, nil
+}
+
+func secret(name string) (string, error) {
+	if value := strings.TrimSpace(os.Getenv(name)); value != "" {
+		return value, nil
 	}
+	path := strings.TrimSpace(os.Getenv(name + "_FILE"))
+	if path == "" {
+		return "", nil
+	}
+	value, err := os.ReadFile(path)
+	if err != nil {
+		return "", fmt.Errorf("read %s_FILE: %w", name, err)
+	}
+	return strings.TrimSpace(string(value)), nil
 }
 
 func env(name, fallback string) string {

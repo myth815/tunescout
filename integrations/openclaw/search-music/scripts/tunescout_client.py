@@ -21,6 +21,12 @@ def settings() -> tuple[str, dict[str, str]]:
         raise SystemExit("TUNESCOUT_BASE_URL is required")
     headers = {"Accept": "application/json", "User-Agent": "TuneScout-OpenClaw-Skill/0.1"}
     api_key = os.environ.get("TUNESCOUT_API_KEY", "").strip()
+    api_key_file = os.environ.get("TUNESCOUT_API_KEY_FILE", "").strip()
+    if not api_key and api_key_file:
+        try:
+            api_key = Path(api_key_file).read_text(encoding="utf-8").strip()
+        except OSError as error:
+            raise SystemExit(f"cannot read TUNESCOUT_API_KEY_FILE: {error}") from error
     if api_key:
         headers["Authorization"] = f"Bearer {api_key}"
     return base, headers
