@@ -38,7 +38,10 @@ does not yield a high-confidence, well-supported result.
    and deletion to the calling workflow.
 
 Run `scripts/tunescout_client.py` directly so credentials stay in environment
-variables. Examples:
+variables and the dedicated read-only executable can match the narrow execution
+allowlist. Never prefix it with `python3`, never wrap it in another shell, and
+do not inspect environment variables or list files unless this direct call
+returns an error. Examples:
 
 ```bash
 scripts/tunescout_client.py search "王菲" --types artist,recording,release
